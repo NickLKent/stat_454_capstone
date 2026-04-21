@@ -68,23 +68,8 @@ sector_weekly_returns <- sector_data %>%
     col_rename = "weekly_return_log"
   )
 
-```
-
-
-```{r}
-sector_weekly_returns %>% 
-  ggplot(aes(x = date, y = weekly_return_log, color = sector_name)) +
-  geom_line() +
-  facet_wrap(~sector_name)
-
-ggplot(sector_data) +
-  geom_line(aes(x = date, y = close, color = sector_name))
-
-write.csv(sector_weekly_returns, "sector_weekly_returns.csv", row.names = FALSE)
-```
-
-```{r}
-cum_returns <- sector_weekly_returns %>%
+# Sector cumulative returns
+cumu_returns <- sector_weekly_returns %>%
   arrange(sector_name, date) %>%
   group_by(sector_name) %>%
   mutate(
@@ -92,7 +77,64 @@ cum_returns <- sector_weekly_returns %>%
   ) %>%
   ungroup()
 
-ggplot(cum_returns) +
-  geom_line(aes(x = date, y = cum_log_return, color = sector_name))
+
+# Getting S&P 500 data
+
+sp500 <- tq_get("^GSPC", from = "2000-01-01")
+sp500$date <- as.Date(sp500$date, format = "%Y-%m-%d") 
+
+sp500_weekly_returns <- sp500 %>%
+  group_by(symbol) %>%
+  tq_transmute(
+    select = adjusted, 
+    mutate_fun = periodReturn,
+    period     = "weekly",
+    type       = "log",
+    col_rename = "weekly_return_log"
+  )
+
+# S&P 500 cumulative returns
+cumu_returns_sp500 <- sp500_weekly_returns %>%
+  arrange(date) %>%
+  mutate(
+    cum_log_return = cumsum(weekly_return_log)
+  ) %>%
+  ungroup()
+```
+
+```{r}
+ggplot() +
+  geom_line(data = cumu_returns, 
+            aes(x = date, y = cum_log_return, color = sector_name)) +
+  geom_line(data = cumu_returns_sp500, 
+            aes(x = date, y = cum_log_return), 
+            color = "black", linetype = "dashed") +
+  labs(title = "Cumulative Returns",
+       x = "Date",
+       y = "Returns") +
+  theme_minimal()
+```
+```{r}
+# because the variable is cumulative returns we expect the correlation from one week to the next to be fairly high
+# draws from the log((1+x) / (1-x)) ~ N(0.8, 0.1)
+x_adjusted <- rnorm(10000, mean = 2.5, sd = 0.4)
+
+# untransforming to just get x between -1 and 1
+x_transformed <- (exp(x_adjusted)-1) / (exp(x_adjusted)+1)
+
+ggplot()+
+  geom_density(aes(x = x_adjusted))
+
+# show this in the report
+ggplot()+
+  geom_density(aes(x = x_transformed))
+
+# between -1 and 1
+min(x_transformed)
+max(x_transformed)
+
+# on the whole real line
+min(x_adjusted)
+max(x_adjusted)
 ```
 
