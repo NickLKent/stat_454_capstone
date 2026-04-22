@@ -4,3 +4,161 @@ format: html
 editor: visual
 ---
 
+
+```{r}
+set.seed(454)
+# load libraries
+library(tidyverse) #ofc
+library(rstan)
+library(readr)
+library(bayesplot)
+library(tidyquant)
+library(dplyr)
+
+```
+
+```{r}
+# Getting sector daily returns
+
+# These are SPDR sector ETFs
+# SPDR = Standard & Poor’s Depositary Receipt. It is family of exchange-traded funds (ETFs) managed by State Street Global Advisors
+sector_tickers <- c(
+  "XLY",  # Consumer Discretionary
+  "XLP",  # Consumer Staples
+  "XLE",  # Energy
+  "XLF",  # Financials
+  "XLV",  # Health Care
+  "XLI",  # Industrials
+  "XLB",  # Materials
+  "XLK",  # Technology
+  "XLU"   # Utilities
+)
+
+# daily data on each ETF from 2000 to present
+sector_data <- tq_get(sector_tickers,
+                      from = "2000-01-01",   
+                      get  = "stock.prices")
+
+# adding sector names to the data
+sector_lookup <- tibble(
+  symbol = c("XLY","XLP","XLE","XLF","XLV","XLI","XLB","XLK","XLU"),
+  sector_name = c(
+    "Consumer Discretionary",
+    "Consumer Staples",
+    "Energy",
+    "Financials",
+    "Health Care",
+    "Industrials",
+    "Materials",
+    "Technology",
+    "Utilities"
+  )
+)
+
+sector_data <- sector_data %>%
+  left_join(sector_lookup, by = "symbol")
+
+sector_data <- sector_data %>%
+  arrange(symbol, date) %>%
+  group_by(symbol) %>%
+  mutate(ret_pct = 100 * (adjusted - lag(adjusted)) / lag(adjusted)) %>%
+  mutate(ret_log = 100 * (log(adjusted) - log(lag(adjusted)))) %>%
+  ungroup()
+
+sector_weekly_returns <- sector_data %>%
+  group_by(symbol, sector_name) %>%
+  tq_transmute(
+    select = adjusted, 
+    mutate_fun = periodReturn,
+    period     = "weekly",
+    type       = "log", 
+    col_rename = "weekly_return_log"
+  )
+
+# Sector cumulative returns
+cumu_returns <- sector_weekly_returns %>%
+  arrange(sector_name, date) %>%
+  group_by(sector_name) %>%
+  mutate(
+    cum_log_return = cumsum(weekly_return_log)
+  ) %>%
+  ungroup()
+
+
+# Getting S&P 500 data
+
+sp500 <- tq_get("^GSPC", from = "2000-01-01")
+sp500$date <- as.Date(sp500$date, format = "%Y-%m-%d") 
+
+sp500_weekly_returns <- sp500 %>%
+  group_by(symbol) %>%
+  tq_transmute(
+    select = adjusted, 
+    mutate_fun = periodReturn,
+    period     = "weekly",
+    type       = "log",
+    col_rename = "weekly_return_log"
+  )
+
+# S&P 500 cumulative returns
+cumu_returns_sp500 <- sp500_weekly_returns %>%
+  arrange(date) %>%
+  mutate(
+    cum_log_return = cumsum(weekly_return_log)
+  ) %>%
+  ungroup()
+
+```
+
+```{r}
+sector_weekly_returns <- sector_weekly_returns %>%
+  left_join(
+    sp500_weekly_returns %>%
+      select(date, weekly_return_log),
+    by = "date",
+    suffix = c("_sector", "_sp500")
+  ) %>%
+  drop_na()
+
+
+sector_weekly_returns <- sector_weekly_returns %>%
+  mutate(sector_id = as.integer(factor(sector_name)))
+
+```
+
+```{r}
+## Partial Pooling approach
+sector_weekly_returns <- sector_weekly_returns %>%
+  mutate(sector_id = as.integer(factor(sector_name))) 
+
+
+# Make data object
+run_data <- list(
+  N = nrow(sector_weekly_returns),
+  J = length(unique(sector_weekly_returns$sector_id)),
+  sector = sector_weekly_returns$sector_id,
+  y = sector_weekly_returns$weekly_return_log_sector,
+  x = sector_weekly_returns$weekly_return_log_sp500
+)
+
+```
+
+```{r}
+# Fit model in Stan
+partial_fit <- stan(file = "C:\\Users\\wwh15\\Desktop\\STAT454 Bayes\\stat_454_capstone\\partial_pooling_capstone.stan", ## make sure to set working directory to source file location
+            data = run_data, 
+            chains = 4, 
+            warmup = 1000,
+            iter = 2000)
+
+```
+
+
+
+```{r}
+print(partial_fit, pars = c("mu_alpha", "beta", "tau_alpha", "sigma"))
+plot(partial_fit, pars = c("mu_alpha", "beta", "tau_alpha", "sigma"))
+traceplot(partial_fit, pars = c("mu_alpha", "beta", "tau_alpha", "sigma"), inc_warmup = TRUE)
+stan_ac(partial_fit, pars = c("mu_alpha", "beta", "tau_alpha", "sigma"))
+
+```
