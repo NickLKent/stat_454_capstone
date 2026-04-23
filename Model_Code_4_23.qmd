@@ -1,0 +1,85 @@
+---
+title: "PP Model Code"
+format: html
+editor: visual
+---
+
+```{r}
+source("cleaning.R")
+
+sector_panel <- cumu_returns %>%
+  select(date, sector_name, cum_log_return)
+
+market_series <- cumu_returns_sp500 %>%
+  select(date, market_cum_log_return = cum_log_return)
+
+model_data_long <- sector_panel %>%
+  inner_join(market_series, by = "date") %>%
+  arrange(sector_name, date)
+
+model_data_long %>%
+  count(sector_name)
+```
+
+```{r}
+y_wide <- model_data_long %>%
+  select(date, sector_name, cum_log_return) %>%
+  pivot_wider(names_from = date, values_from = cum_log_return) %>%
+  arrange(sector_name)
+
+sector_names <- y_wide$sector_name
+y_mat <- y_wide %>%
+  select(-sector_name) %>%
+  as.matrix()
+
+m_vec <- model_data_long %>%
+  distinct(date, market_cum_log_return) %>%
+  arrange(date) %>%
+  pull(market_cum_log_return)
+
+```
+
+```{r}
+# finding gamma priors
+all_y <- as.vector(y_mat)
+
+mean_y <- mean(all_y, na.rm = TRUE)
+sd_y   <- sd(all_y, na.rm = TRUE)
+var_y  <- var(all_y, na.rm = TRUE)
+mean_prec <- 1 / var_y
+sd_prec   <- mean_prec / 2 
+a_tau <- (mean_prec / sd_prec)^2
+b_tau <- mean_prec / (sd_prec^2)
+
+stan_data <- list(
+  N = nrow(y_mat),
+  T = ncol(y_mat),
+  y = y_mat,
+  m = m_vec,
+  a_tau = a_tau,
+  b_tau = b_tau
+)
+
+fit <- stan(
+  file = "pp_model_4_23.stan",
+  data = stan_data,
+  chains = 4,
+  iter = 2000,
+  seed = 123,
+  control = list(adapt_delta = 0.95, max_treedepth = 12)
+)
+
+```
+
+
+```{r}
+# this gives results for each sector
+print(fit, pars = c("phi", "beta"), probs = c(0.025, 0.5, 0.975))
+
+traceplot(fit, pars = "phi")
+traceplot(fit, pars = "beta")
+
+stan_ac(fit, pars = "phi")
+stan_ac(fit, pars = "beta")
+```
+
