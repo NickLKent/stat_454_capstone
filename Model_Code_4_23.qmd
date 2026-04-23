@@ -71,7 +71,6 @@ fit <- stan(
 
 ```
 
-
 ```{r}
 # this gives results for each sector
 print(fit, pars = c("phi", "beta"), probs = c(0.025, 0.5, 0.975))
@@ -82,4 +81,3 @@ traceplot(fit, pars = "beta")
 stan_ac(fit, pars = "phi")
 stan_ac(fit, pars = "beta")
 ```
-
