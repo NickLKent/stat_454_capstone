@@ -57,7 +57,13 @@ stan_data <- list(
   y = y_mat,
   m = m_vec,
   a_tau = a_tau,
-  b_tau = b_tau
+  b_tau = b_tau, 
+  alpha_mu = 0,
+  alpha_sd = 0.7,
+  phi_transform_mu = 2,
+  phi_transform_sd = 0.4,
+  beta_transform_mu = 2.5,
+  beta_transform_sd = 0.4
 )
 
 fit <- stan(

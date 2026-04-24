@@ -7,6 +7,15 @@ data {
   // gamma prior parameters for precision = 1/tau = 1/sigma^2
   real<lower=0> a_tau;
   real<lower=0> b_tau;
+  
+  real alpha_mu;
+  real<lower=0> alpha_sd;
+  
+  real phi_transform_mu;
+  real<lower=0> phi_transform_sd;
+  
+  real beta_transform_mu;
+  real<lower=0> beta_transform_sd;
 }
 
 parameters {
@@ -31,9 +40,9 @@ transformed parameters {
 
 model {
   // priors
-  target += normal_lpdf(alpha | 0, 0.7);
-  target += normal_lpdf(phi_transform | 2, 0.4);
-  target += normal_lpdf(beta_transform | 2.5, 0.4);
+  target += normal_lpdf(alpha | alpha_mu, alpha_sd);
+  target += normal_lpdf(phi_transform | phi_transform_mu, phi_transform_sd);
+  target += normal_lpdf(beta_transform | beta_transform_mu, beta_transform_sd);
   target += gamma_lpdf(precision | a_tau, b_tau);
 
   // likelihood
