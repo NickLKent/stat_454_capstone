@@ -114,10 +114,11 @@ ggplot() +
        y = "Returns") +
   theme_minimal()
 ```
+
 ```{r}
 # because the variable is cumulative returns we expect the correlation from one week to the next to be fairly high
 # draws from the log((1+x) / (1-x)) ~ N(0.8, 0.1)
-x_adjusted <- rnorm(10000, mean = 2.5, sd = 0.4)
+x_adjusted <- rnorm(10000, mean = 1, sd = 0.4)
 
 # untransforming to just get x between -1 and 1
 x_transformed <- (exp(x_adjusted)-1) / (exp(x_adjusted)+1)
@@ -137,4 +138,3 @@ max(x_transformed)
 min(x_adjusted)
 max(x_adjusted)
 ```
-

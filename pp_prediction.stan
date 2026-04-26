@@ -16,6 +16,12 @@ data {
   
   real beta_transform_mu;
   real<lower=0> beta_transform_sd;
+  
+  // New observations for prediction
+  int<lower=1> N_new;
+  array[N_new] int<lower=1, upper=N> sector_new;
+  vector[N_new] y_lag_new;
+  vector[N_new] m_lag_new;
 }
 
 parameters {
@@ -54,17 +60,15 @@ model {
 }
 
 generated quantities {
-  matrix[N, T] y_rep;
+  vector[N_new] mu_new;
+  vector[N_new] y_pred_new;
 
-  for (i in 1:N) {
-    y_rep[i, 1] = y[i, 1];  // or just set equal, since model starts at t=2
+  for (l in 1:N_new) {
+    mu_new[l] = alpha[sector_new[l]] +
+                phi[sector_new[l]] * y_lag_new[l] +
+                beta[sector_new[l]] * m_lag_new[l];
 
-    for (t in 2:T) {
-      y_rep[i, t] = normal_rng(
-        alpha[i] + phi[i] * y[i, t-1] + beta[i] * m[t-1],
-        sqrt(tau)
-      );
-    }
+    y_pred_new[l] = normal_rng(mu_new[l], sqrt(tau));
   }
 }
 
