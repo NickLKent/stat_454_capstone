@@ -93,6 +93,13 @@ traceplot(fit, pars = "beta")
 
 stan_ac(fit, pars = "phi")
 stan_ac(fit, pars = "beta")
+
+ess_bulk(extract(fit, pars = "phi", permuted = FALSE)[,,2])
+ess_bulk(extract(fit, pars = "beta", permuted = FALSE)[,,2])
+
+Rhat(extract(fit, pars = "phi", permuted = FALSE)[,,3])
+Rhat(extract(fit, pars = "beta", permuted = FALSE)[,,3])
+
 ```
 
 
@@ -177,7 +184,6 @@ ggplot(pred_summary, aes(x = sector, y = pred_mean)) +
   geom_errorbar(aes(ymin = lower_95, ymax = upper_95), width = 0.2) +
   theme_classic() +
   labs(
-    title = "One-week-ahead posterior predictions by sector",
     x = "Sector",
     y = "Predicted cumulative log return"
   ) +

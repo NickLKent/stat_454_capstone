@@ -113,22 +113,47 @@ ggplot() +
        x = "Date",
        y = "Returns") +
   theme_minimal()
+
+
+ggplot() +
+  geom_line(data = cumu_returns, 
+            aes(x = date, y = weekly_return_log, color = sector_name)) +
+  labs(title = "Cumulative Returns",
+       x = "Date",
+       y = "Returns") +
+  theme_minimal()
 ```
 
 ```{r}
 # because the variable is cumulative returns we expect the correlation from one week to the next to be fairly high
 # draws from the log((1+x) / (1-x)) ~ N(0.8, 0.1)
-x_adjusted <- rnorm(10000, mean = 1, sd = 0.4)
-
-# untransforming to just get x between -1 and 1
+x_adjusted <- rnorm(10000, mean = 2, sd = 0.4)
 x_transformed <- (exp(x_adjusted)-1) / (exp(x_adjusted)+1)
 
+x_adjusted1 <- rnorm(10000, mean = 1, sd = 0.4)
+x_transformed1 <- (exp(x_adjusted1)-1) / (exp(x_adjusted1)+1)
+
+x_adjusted2 <- rnorm(10000, mean = 0, sd = 0.4)
+x_transformed2 <- (exp(x_adjusted2)-1) / (exp(x_adjusted2)+1)
+
+x_adjusted3 <- rnorm(10000, mean = -1, sd = 0.4)
+x_transformed3 <- (exp(x_adjusted3)-1) / (exp(x_adjusted3)+1)
+
+x_adjusted4 <- rnorm(10000, mean = -2, sd = 0.4)
+x_transformed4 <- (exp(x_adjusted4)-1) / (exp(x_adjusted4)+1)
+
 ggplot()+
-  geom_density(aes(x = x_adjusted))
+  geom_density(aes(x = x_adjusted)) 
 
 # show this in the report
-ggplot()+
-  geom_density(aes(x = x_transformed))
+ggplot() +
+  geom_density(aes(x = x_transformed,  color = "baseline")) +
+  geom_density(aes(x = x_transformed1, color = "prior 1")) +
+  geom_density(aes(x = x_transformed2, color = "prior 2")) +
+  geom_density(aes(x = x_transformed3, color = "prior 3")) +
+  geom_density(aes(x = x_transformed4, color = "prior 4")) +
+  labs(x = "", color = "Prior") +
+  theme_classic()
 
 # between -1 and 1
 min(x_transformed)
