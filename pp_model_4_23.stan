@@ -33,7 +33,7 @@ model {
   // priors
   target += normal_lpdf(alpha | 0, 0.7);
   target += normal_lpdf(phi_transform | 2, 0.4);
-  target += normal_lpdf(beta_transform | 2.5, 0.4);
+  target += normal_lpdf(beta_transform | 2, 0.4);
   target += gamma_lpdf(precision | a_tau, b_tau);
 
   // likelihood
@@ -52,7 +52,7 @@ generated quantities {
 
     for (t in 2:T) {
       y_rep[i, t] = normal_rng(
-        alpha[i] + phi[i] * y[i, t-1] + beta[i] * m[t-1],
+        alpha + phi[i] * y[i, t-1] + beta[i] * m[t-1],
         sqrt(tau)
       );
     }
