@@ -2,12 +2,15 @@
 title: "PP Model Code"
 format: html
 editor: visual
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r}
 library(rstan)
 library(bayesplot)
 ```
+
 
 ```{r}
 source("cleaning.R")
@@ -44,8 +47,6 @@ m_vec <- model_data_long %>%
 
 ```
 
-
-# run the model
 ```{r}
 # finding gamma priors
 all_y <- as.vector(y_mat)
@@ -64,13 +65,7 @@ stan_data <- list(
   y = y_mat,
   m = m_vec,
   a_tau = a_tau,
-  b_tau = b_tau, 
-  alpha_mu = 0,
-  alpha_sd = 0.7,
-  phi_transform_mu = 2,
-  phi_transform_sd = 0.4,
-  beta_transform_mu = 2.5,
-  beta_transform_sd = 0.4
+  b_tau = b_tau
 )
 
 fit <- stan(
@@ -93,17 +88,8 @@ traceplot(fit, pars = "beta")
 
 stan_ac(fit, pars = "phi")
 stan_ac(fit, pars = "beta")
-
-ess_bulk(extract(fit, pars = "phi", permuted = FALSE)[,,2])
-ess_bulk(extract(fit, pars = "beta", permuted = FALSE)[,,2])
-
-Rhat(extract(fit, pars = "phi", permuted = FALSE)[,,3])
-Rhat(extract(fit, pars = "beta", permuted = FALSE)[,,3])
-
 ```
 
-
-# Posterior predictive checks
 ```{r}
 post <- rstan::extract(fit)
 
@@ -128,65 +114,5 @@ ppc_intervals(
   prob_outer = 0.95
 ) +
   theme_classic()
-```
-
-# forecast
-```{r}
-# most recent observed sector cumulative returns
-last_y <- y_mat[, ncol(y_mat)]
-
-# most recent observed market cumulative return
-last_m <- m_vec[length(m_vec)]
-
-stan_data_pred <- list(
-  N = nrow(y_mat),
-  T = ncol(y_mat),
-  y = y_mat,
-  m = m_vec,
-  a_tau = a_tau,
-  b_tau = b_tau, 
-  alpha_mu = 0,
-  alpha_sd = 0.7,
-  phi_transform_mu = 2,
-  phi_transform_sd = 0.4,
-  beta_transform_mu = 2.5,
-  beta_transform_sd = 0.4,
-  N_new = nrow(y_mat),
-  sector_new = 1:nrow(y_mat),
-  y_lag_new = last_y,
-  m_lag_new = rep(last_m, nrow(y_mat))
-)
-
-fit_pred <- stan(
-  file = "pp_prediction.stan",
-  data = stan_data_pred,
-  chains = 4,
-  iter = 2000,
-  seed = 123,
-  control = list(adapt_delta = 0.95, max_treedepth = 12)
-)
-
-post_pred <- rstan::extract(fit_pred, pars = "y_pred_new")[[1]]
-
-pred_summary <- data.frame(
-  sector = sector_names,
-  pred_mean = apply(post_pred, 2, mean),
-  lower_95 = apply(post_pred, 2, quantile, 0.025),
-  upper_95 = apply(post_pred, 2, quantile, 0.975)
-)
-
-pred_summary
-
-library(ggplot2)
-
-ggplot(pred_summary, aes(x = sector, y = pred_mean)) +
-  geom_point() +
-  geom_errorbar(aes(ymin = lower_95, ymax = upper_95), width = 0.2) +
-  theme_classic() +
-  labs(
-    x = "Sector",
-    y = "Predicted cumulative log return"
-  ) +
-  coord_flip()
 ```
 

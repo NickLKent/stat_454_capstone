@@ -21,8 +21,8 @@ sector_tickers <- c(
 
 # daily data on each ETF from 2000 to present
 sector_data <- tq_get(sector_tickers,
-                      from = "2000-01-01",
-                      to   = "2025-12-05",
+                      from = "2006-01-01",
+                      to   = "2010-12-05",
                       get  = "stock.prices")
 
 # adding sector names to the data
