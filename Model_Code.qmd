@@ -4,7 +4,6 @@ format: html
 editor: visual
 ---
 
-
 ```{r}
 set.seed(454)
 # load libraries
@@ -152,8 +151,6 @@ partial_fit <- stan(file = "C:\\Users\\wwh15\\Desktop\\STAT454 Bayes\\stat_454_c
             iter = 2000)
 
 ```
-
-
 
 ```{r}
 print(partial_fit, pars = c("mu_alpha", "beta", "tau_alpha", "sigma"))
